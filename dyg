@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# licensed to GPL
+
+help() {
+    echo "    dyg stands for DownYouGo and is a cli multi-proccess file downloader which downloads files to ~/dyg/"
+    echo ""
+    echo "    usage:"
+    echo "        dyg [param] [value]"
+    echo "    params:"
+    echo "        -l|--link      link to download"
+    echo "        -n|--number    number of partitions"
+    echo "        -o|--out       output file"
+    echo "        -h|--help      shows this help"
+    echo ""
+    echo "        link, number & output are neccessary parameters"
+}
+
+input() {    
+    if (($# == 0)); then
+        echo ""
+        echo "    no input given"
+        echo ""
+        help
+        exit 0
+    fi
+
+    while (($# > 0)); do
+        case "$1" in
+            -l|--link)
+                link="$2"
+                shift
+                shift
+                ;;
+            -n|--number)
+                number="$2"
+                shift
+                shift
+                ;;
+            -o|--out)
+                output="$2"
+                shift
+                shift
+                ;;
+            -h|--help|*)
+                help 
+                exit 0
+                shift
+                ;;
+        esac
+    done;
+
+
+    if [ -z "$link" ] || [ -z "$number" ] || [ -z "$output" ]; then
+        echo "link, number or output not given, exiting"
+        exit 0
+    fi
+}
+
+link=""
+number=""
+output=""
+
+input "$@"
+
+head=`curl --head $link`
+if [ -z "$head" ]; then
+    echo "server has not responded to head request, exiting"
+    exit 1
+fi
+
+length=`curl --head $link | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
+if [ -z "$length" ]; then
+    echo "server does not accept range requests, downloading in a single part"
+    let "number=1"
+fi
+
+
+mkdir -p ~/dyg/temp/$output
+mkdir -p ~/dyg/log/$output
+cd ~/dyg
+
+
+now=0
+pack=`echo "scale=0 ; $length / $number" | bc`
+downs=""
+for ((i=0; i < number; i++)); do
+    if (($now + $pack < $length)); then
+        range=$now$(( now + pack ))
+        let "now+=pack + 1"
+    else
+        range=$now-
+        let "now+=pack + 2"
+    fi
+    curl --progress-bar -H "Range: bytes=$range" --get $link -o temp/$output/$i.temp > log/$output/$i.log &
+    downs="$downs $i.temp"
+done
+
+wait
+
+cd temp/$output
+list=`ls * | sort -n`
+echo $list
+cat $list > ../../$output
+cd ../..
+rm -r temp/$output*
+

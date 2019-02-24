@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# licensed to GPL
+
+help() {
+    echo "    dyg stands for DownYouGo and is a cli multi-proccess file downloader which downloads files to ~/Downloads/dyg/"
+    echo ""
+    echo "    to make sure you have the following requirements installed run the command:"
+    echo "        sudo apt install curl grep awk stat basename dos2unix bc"
+    echo ""
+    echo "    usage:"
+    echo "        dyg [param] [value]"
+    echo "    params:"
+    echo "        -l|--link      link to download"
+    echo "        -n|--number    number of partitions"
+    echo "        -o|--out       output file"
+    echo "        -h|--help      shows this help"
+    echo ""
+    echo "        link is a neccessary parameter"
+    echo "        number will be set to 8 if not given as a parameter"
+    echo "        out will be set to the name which is in url if not given as a paramater"
+}
+
+input() {    
+    if (($# == 0)); then
+        echo ""
+        echo "    no input given"
+        echo ""
+        help
+        exit 0
+    fi
+
+    while (($# > 0)); do
+        case "$1" in
+            -l|--link)
+                link="$2"
+                shift
+                shift
+                ;;
+            -n|--number)
+                number="$2"
+                shift
+                shift
+                ;;
+            -o|--out)
+                output="$2"
+                shift
+                shift
+                ;;
+            -h|--help|*)
+                help 
+                exit 0
+                shift
+                ;;
+        esac
+    done;
+
+
+    if [ -z "$link" ]; then
+        echo "link not given, exiting"
+        exit 0
+    fi
+
+    if [ -z "$number" ]; then
+        number=16
+    fi
+    echo "    downloading in 16 processes"
+
+    if [ -z "$output" ]; then
+        output=`basename $link`
+    fi
+    echo "    saving to ~/Downloads/dyg/$output"
+}
+
+link=""
+number=""
+output=""
+
+input "$@"
+
+head=`curl --head $link 2>&1`
+if [ -z "$head" ]; then
+    echo "server has not responded to head request, exiting"
+    exit 1
+fi
+
+length=`curl --head $link 2>&1 | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
+if [ -z "$length" ]; then
+    echo "server does not accept range requests, downloading in a single part"
+    let "number=1"
+fi
+
+
+mkdir -p ~/Downloads/dyg/temp/$output
+mkdir -p ~/Downloads/dyg/log/$output
+mkdir -p ~/Downloads/dyg/info
+cd ~/Downloads/dyg
+
+
+echo "    writing parts info to ~/Downloads/dyg/info/$output"
+echo "" > info/$output
+byte_on=0
+part_length=`echo "scale=0 ; $length / $number" | bc`
+last_part_length=`bc -l <<< "scale=0 ; $length - $part_length * (number - 1)"`
+downs=""
+for ((i=0; i < number; i++)); do
+    if (($byte_on + $part_length < $length)); then
+        range="$byte_on-$(( byte_on + part_length - 1))"
+    else
+        range="$byte_on-"
+    fi
+    let "byte_on+=part_length"
+    echo "part $i: $range" >> info/$output 
+    curl --progress-bar -H "Range: bytes=$range" --get $link -o temp/$output/$i.temp > log/$output/$i.log 2>&1 &
+    downs="$downs $i.temp"
+done
+
+
+echo
+while ((1)); do
+    printf "\033[32m\033[2K\033[7m\t      downloading      \033[0m\033[32m\n"
+    parts_sum=0
+    for ((i=0;i < number; i++)); do
+        if [ ! -f temp/$output/$i.temp ]; then
+            part_size=0
+        else
+            part_size=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
+        fi
+        parts_sum=$((parts_sum + part_size))
+        printf "\033[2K\tpart %03d:\t%6.2f%%\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
+    done
+    printf "\033[2K\033[7m\ttotal:% 16.2f%%\033[0m\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
+    printf "\033[$((number + 2))A"
+
+    if [ "$parts_sum" -eq "$length" ]; then
+        break;
+    fi
+    sleep 1
+done
+    printf "\033[$((number + 2))B\033[0m"
+
+
+wait
+
+
+cd temp/$output
+list=`ls * | sort -n`
+printf "\033[7m\tsuccessfully downloaded\033[0m\n"
+cat $list > ../../$output
+cd ../..
+
+#TODO: IF A PART DOWNLOAD CURROPTS RETRY
+
+#rm -r temp/$output*
+

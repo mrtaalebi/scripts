@@ -1,0 +1,37 @@
+#!/bin/bash
+
+domain="gozaronline.net:800"
+
+connect() {
+    occ d
+	sudo openconnect -b $1.$domain < "/etc/.occ_data"
+}
+
+disconnect () {
+	sudo pkill -SIGINT openconnect
+	ip r | grep ppp0 && ip r | grep default | head -n1 | xargs sudo ip r del
+}
+
+help() {
+    printf "\nOpen Connect (dis)Connector\n"
+    printf "usage:\n\tocc [server-prefix]\n\t\tconnects to vpn server at server-prefix.server-postfix\n\tocc d\n\t\tdisconnects from connected vpn server\n"
+    printf "current vpn server-postfix is set to:\n\t$domain\nalso add your username and password in separate lines in /etc/.occ_data\n"
+    exit 0
+}
+
+
+if (($# == 0)); then
+    help
+fi
+
+case $1 in
+	d )
+	disconnect
+	;;
+	-h|--help)
+    help
+    ;;
+    *)
+	connect $1
+	;;
+esac

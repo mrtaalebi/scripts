@@ -102,7 +102,6 @@ echo "" > info/$output
 byte_on=0
 part_length=`echo "scale=0 ; $length / $number" | bc`
 last_part_length=`bc -l <<< "scale=0 ; $length - $part_length * (number - 1)"`
-echo $part_length
 downs=""
 for ((i=0; i < number; i++)); do
     if (($byte_on + $part_length < $length)); then

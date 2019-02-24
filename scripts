@@ -6,7 +6,7 @@ help() {
     echo "    dyg stands for DownYouGo and is a cli multi-proccess file downloader which downloads files to ~/Downloads/dyg/"
     echo ""
     echo "    to make sure you have the following requirements installed run the command:"
-    echo "        sudo apt install curl grep awk stat basename dos2unix bc"
+    echo "        sudo apt install curl grep gawk dos2unix bc"
     echo ""
     echo "    usage:"
     echo "        dyg [param] [value]"

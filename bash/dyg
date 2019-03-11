@@ -102,13 +102,19 @@ part_length=`bc -l <<< "scale=0; $length / $number"`
 downs=""
 for ((i=0; i < number; i++)); do
     if (($i != number - 1)); then
-        range="$byte_on-$(( byte_on + part_length - 1))"
+        if [ -f temp/$output/$i.temp ]; then
+            currently_downloaded=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
+            start_from=$(currently_downloaded + byte_on + 1)
+        else
+            start_from=$byte_on
+        fi
+        range="$start_from-$(( byte_on + part_length - 1))"
     else
         range="$byte_on-"
     fi
     let "byte_on+=part_length"
     echo "part $i: $range" >> info/$output
-    curl --progress-bar -H "Range: bytes=$range" --get $link -o temp/$output/$i.temp > log/$output/$i.log 2>&1 &
+    curl -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
     downs="$downs $i.temp"
 done
 

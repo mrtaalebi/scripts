@@ -60,10 +60,14 @@ input() {
     if [ -z "$output" ]; then
         output=`basename $link`
     fi
-    echo "    saving to ~/Downloads/dyg/$output"
+    if [ -f ~/Downloads/$output ]; then
+        echo "    file already exists, exiting"
+        exit 0
+    fi
+    echo "    saving to ~/Downloads/$output"
 
-    if [ -f ~/Downloads/dyg/info/$output ]; then
-        number=`cat ~/Downloads/dyg/info/$output`
+    if [ -f ~/Downloads/.dyg/info/$output ]; then
+        number=`cat ~/Downloads/.dyg/info/$output`
     elif [ -z "$number" ]; then
         number=16
     fi
@@ -90,13 +94,13 @@ if [ -z "$length" ]; then
 fi
 
 
-mkdir -p ~/Downloads/dyg/temp/$output
-mkdir -p ~/Downloads/dyg/log/$output
-mkdir -p ~/Downloads/dyg/info
-cd ~/Downloads/dyg
+mkdir -p ~/Downloads/.dyg/temp/$output
+mkdir -p ~/Downloads/.dyg/log/$output
+mkdir -p ~/Downloads/.dyg/info
+cd ~/Downloads/.dyg
 
 
-echo "    writing parts info to ~/Downloads/dyg/info/$output"
+echo "    writing parts info to ~/Downloads/.dyg/info/$output"
 echo "$number" > info/$output
 byte_on=0
 part_length=`bc -l <<< "scale=0; $length / $number"`
@@ -107,7 +111,7 @@ for ((i=0; i < number; i++)); do
         if [ $currently_downloaded -ge $part_length ]; then
             continue
         fi
-        start_from=`bc -l <<< "scale=0; $currently_downloaded + $byte_on + 1"`
+        start_from=`bc -l <<< "scale=0; $currently_downloaded + $byte_on"`
     else
         start_from=$byte_on
     fi
@@ -166,10 +170,8 @@ printf "\tsuccessfully downloaded\033[$color\n"
 printf "\033[7m\tcontent:% 12.2f MB\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
 printf "\033[2K\033[7m\tin:% 18.2f m\n" `bc -l <<< "scale=4; ($end_sec - $start_sec + 1) / 60"`
 printf "\033[2K\033[7m\twith:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / ($end_sec - $start_sec + 1)"`
-cat $list > ../../$output
+cat $list > ../../../$output
+
 cd ../..
-
-#TODO: IF A PART DOWNLOAD CURROPTS RETRY
-
-#rm -r temp/$output*
+rm -r temp/$output*
 

@@ -5,38 +5,36 @@
 help() {
     echo "    dyg stands for DownYouGo and is a cli multi-proccess file downloader which downloads files to ~/Downloads/dyg/"
     echo ""
-    echo "    to make sure you have the following requirements installed run the command:"
-    echo "        sudo apt install curl grep gawk dos2unix bc"
+    echo "    to make sure you have all the following requirements installed run the command:"
+    echo "        sudo apt install curl gawk dos2unix bc"
     echo ""
     echo "    usage:"
-    echo "        dyg [param] [value]"
+    echo "        dyg <link> [param values]"
     echo "    params:"
-    echo "        -l|--link      link to download"
     echo "        -n|--number    number of partitions"
     echo "        -o|--out       output file"
     echo "        -h|--help      shows this help"
     echo ""
     echo "        link is a neccessary parameter"
-    echo "        number will be set to 8 if not given as a parameter"
+    echo "        number will be set to 16 if not given as a parameter"
     echo "        out will be set to the name which is in url if not given as a paramater"
 }
 
 input() {    
-    if (($# == 0)); then
+    if (($# < 1)); then
         echo ""
-        echo "    no input given"
+        echo "    param size zero, exiting"
         echo ""
         help
         exit 0
     fi
 
+    link="$1"
+    shift
+    shift
+
     while (($# > 0)); do
         case "$1" in
-            -l|--link)
-                link="$2"
-                shift
-                shift
-                ;;
             -n|--number)
                 number="$2"
                 shift
@@ -55,7 +53,6 @@ input() {
         esac
     done;
 
-
     if [ -z "$link" ]; then
         echo "link not given, exiting"
         exit 0
@@ -72,6 +69,7 @@ input() {
     echo "    saving to ~/Downloads/dyg/$output"
 }
 
+
 link=""
 number=""
 output=""
@@ -87,7 +85,7 @@ fi
 length=`curl --head $link 2>&1 | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
 if [ -z "$length" ]; then
     echo "server does not accept range requests, downloading in a single part"
-    let "number=1"
+    number=1
 fi
 
 
@@ -100,23 +98,24 @@ cd ~/Downloads/dyg
 echo "    writing parts info to ~/Downloads/dyg/info/$output"
 echo "" > info/$output
 byte_on=0
-part_length=`echo "scale=0 ; $length / $number" | bc`
-last_part_length=`bc -l <<< "scale=0 ; $length - $part_length * (number - 1)"`
+part_length=`bc -l <<< "scale=0; $length / $number"`
 downs=""
 for ((i=0; i < number; i++)); do
-    if (($byte_on + $part_length < $length)); then
+    if (($i != number - 1)); then
         range="$byte_on-$(( byte_on + part_length - 1))"
     else
         range="$byte_on-"
     fi
     let "byte_on+=part_length"
-    echo "part $i: $range" >> info/$output 
+    echo "part $i: $range" >> info/$output
     curl --progress-bar -H "Range: bytes=$range" --get $link -o temp/$output/$i.temp > log/$output/$i.log 2>&1 &
     downs="$downs $i.temp"
 done
 
 
-echo
+echo 
+start_sec=`date +"%s"`
+last_sum=0
 while ((1)); do
     printf "\033[32m\033[2K\033[7m\t      downloading      \033[0m\033[32m\n"
     parts_sum=0
@@ -129,15 +128,18 @@ while ((1)); do
         parts_sum=$((parts_sum + part_size))
         printf "\033[2K\tpart %03d:\t%6.2f%%\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
     done
-    printf "\033[2K\033[7m\ttotal:% 16.2f%%\033[0m\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
-    printf "\033[$((number + 2))A"
+    printf "\033[2K\033[7m\ttotal:% 16.2f%%\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
+    printf "\033[2K\033[7m\tspeed:% 12.2f MB/s\033[0m\n" `bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
+    last_sum=$parts_sum
+    printf "\033[$((number + 3))A"
 
     if [ "$parts_sum" -eq "$length" ]; then
         break;
     fi
     sleep 1
 done
-    printf "\033[$((number + 2))B\033[0m"
+printf "\033[$((number + 3))B\033[33m"
+end_sec=`date +"%s"`
 
 
 wait
@@ -145,7 +147,10 @@ wait
 
 cd temp/$output
 list=`ls * | sort -n`
-printf "\033[7m\tsuccessfully downloaded\033[0m\n"
+printf "\033[7m\tsuccessfully downloaded\033[32m\n"
+printf "\033[7m\tcontent:% 12.2f MB\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
+printf "\033[2K\033[7m\tin:% 18.2f m\n" `bc -l <<< "scale=4; ($end_sec - $start_sec + 1) / 60"`
+printf "\033[2K\033[7m\twith:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / ($end_sec - $start_sec + 1)"`
 cat $list > ../../$output
 cd ../..
 

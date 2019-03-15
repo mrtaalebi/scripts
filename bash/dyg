@@ -89,8 +89,8 @@ fi
 
 length=`curl --head $link 2>&1 | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
 if [ -z "$length" ]; then
-    echo "server does not accept range requests, downloading in a single part"
-    number=1
+    echo "server bad response to curl --head $link, exiting"
+    exit 1
 fi
 
 
@@ -104,11 +104,11 @@ echo "    writing parts info to ~/Downloads/.dyg/info/$output"
 echo "$number" > info/$output
 byte_on=0
 part_length=`bc -l <<< "scale=0; $length / $number"`
-downs=""
 for ((i=0; i < number; i++)); do
     if [ -f temp/$output/$i.temp ]; then
         currently_downloaded=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
         if [ $currently_downloaded -ge $part_length ]; then
+            let "byte_on+=part_length" 
             continue
         fi
         start_from=`bc -l <<< "scale=0; $currently_downloaded + $byte_on"`
@@ -122,7 +122,6 @@ for ((i=0; i < number; i++)); do
     fi
     let "byte_on+=part_length"
     curl -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
-    downs="$downs $i.temp"
 done
 
 

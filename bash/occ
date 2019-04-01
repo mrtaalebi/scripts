@@ -1,21 +1,44 @@
 #!/bin/bash
 
-domain="gozaronline.net:800"
+
+##############################
+##############################
+
+config_file="$HOME/.occ_data"
+
+##############################
+##############################
+
+grep_awk() {
+    gal=`grep -i $1 $config_file | awk '{print $2}'`
+}
 
 connect() {
-    occ d
-	sudo openconnect -b $1.$domain < "/etc/.occ_data"
+    disconnect
+
+    grep_awk "domain";   domain=$gal
+    grep_awk "username"; username=$gal
+    grep_awk "password"; password=$gal
+    echo $password | sudo openconnect -b $1.$domain -u $username &> .occ_log
 }
+
 
 disconnect () {
 	sudo pkill -SIGINT openconnect
-	ip r | grep ppp0 && ip r | grep default | head -n1 | xargs sudo ip r del
 }
 
+
 help() {
-    printf "\nOpen Connect (dis)Connector\n"
-    printf "usage:\n\tocc [server-prefix]\n\t\tconnects to vpn server at server-prefix.server-postfix\n\tocc d\n\t\tdisconnects from connected vpn server\n"
-    printf "current vpn server-postfix is set to:\n\t$domain\nalso add your username and password in separate lines in /etc/.occ_data\n"
+    echo "occ uses openconnect to connect and disconnect :)"
+    echo "    usage:"
+    echo "        occ <server-prefix>    connects to vpn server at server-prefix.vpn_server-postfix"
+    echo "        occ d                  disconnects!"
+    echo "        occ -h|--help          shows this help"
+    echo 
+    echo "    ALSO CONSIDER writing your vpn data in $config_file following this format:"
+    echo "        domain:   <vpn_server_postfix>"
+    echo "        username: <username>"
+    echo "        password: <password>"
     exit 0
 }
 
@@ -35,3 +58,4 @@ case $1 in
 	connect $1
 	;;
 esac
+

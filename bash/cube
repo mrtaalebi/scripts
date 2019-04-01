@@ -1,0 +1,47 @@
+#!/bin/bash
+
+SCALE=4
+DELAY=0.1
+REPEATS=100
+
+draw() {
+    color="48;5;$1m"
+    while ((1))
+    do
+        for ((i=0;i<$REPEATS;i++))
+        do
+            len=$(((100 * 100 * 100 * 100 - ((RANDOM * RANDOM * RANDOM * RANDOM) % (100 * 100 * 100 * 100))) % SCALE + 1))
+            x=$(((RANDOM % (`tput lines`/ $len)) * $len))
+            y=$(((RANDOM % (`tput cols` / ($len * 2))) * ($len * 2)))
+            for ((i=0;i<$len;i++))
+            do
+                for ((j=0;j<$len;j++))
+                do
+                    printf "\e[0m\e[$((x + i));$((y + (j * 2)))H\e[$color  "
+                done
+            done
+            sleep `bc -l <<< "scale=2; $((len / 256 * $1)) * $((len / 256 * $1)) * $DELAY * $((RANDOM % SCALE + 1))"`
+        done
+        sleep `bc -l <<< "scale=2; $SCALE * $DELAY * $REPEATS"`
+    done
+    exit 0
+}
+
+clean() {
+    while ((1))
+    do
+        printf "\e[0m\e[2J"
+        sleep $DELAY
+    done
+}
+
+# clean &
+
+for ((i=0;i<256;i++))
+do
+    draw $i &
+done
+
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
+wait

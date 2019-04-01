@@ -3,16 +3,25 @@
 # licensed to GPL
 
 help() {
-    echo "    dyg stands for DownYouGo and is a cli multi-proccess file downloader which downloads files to ~/Downloads/dyg/"
     echo ""
+    echo "    dyg stands for DownYouGo and is a cli multi-proccess download manager"
+    echo "    downloaded files will be saved to ~/Downloads/"
+    echo ""
+    echo "    *******************************************************************************"
     echo "    to make sure you have all the following requirements installed run the command:"
     echo "        sudo apt install curl gawk dos2unix bc"
+    echo "    *******************************************************************************"
     echo ""
     echo "    usage:"
-    echo "        dyg <link> [param values]"
+    echo "        to download a new file:"
+    echo "            dyg <link> [param values]"
+    echo "        to continue previous downloads: (work not in progress. developer so tired.)"
+    echo "            dyg list"
+    echo "            dyg resume <download_id>(s) ..."
     echo "    params:"
     echo "        -n|--number    number of partitions"
     echo "        -o|--out       output file"
+    echo "        -b|--background continue in background"
     echo "        -h|--help      shows this help"
     echo ""
     echo "        link is a neccessary parameter"
@@ -22,15 +31,14 @@ help() {
 
 input() {    
     if (($# < 1)); then
-        echo ""
-        echo "    param size zero, exiting"
-        echo ""
         help
-        exit 0
+        exit 1
     fi
 
     link="$1"
     shift
+
+    background=0
 
     while (($# > 0)); do
         case "$1" in
@@ -44,6 +52,10 @@ input() {
                 shift
                 shift
                 ;;
+            -b|--background)
+                background=1
+                shift
+                ;; 
             -h|--help|*)
                 help 
                 exit 0
@@ -99,6 +111,7 @@ mkdir -p ~/Downloads/.dyg/log/$output
 mkdir -p ~/Downloads/.dyg/info
 cd ~/Downloads/.dyg
 
+cat $link >> .list
 
 echo "    writing parts info to ~/Downloads/.dyg/info/$output"
 echo "$number" > info/$output
@@ -123,6 +136,13 @@ for ((i=0; i < number; i++)); do
     let "byte_on+=part_length"
     curl -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
 done
+
+
+if [ $background -eq 1 ]; then
+    echo "    continuing in background"
+    kill -SIGSTOP $$
+    kill -SIGCONT $$
+fi
 
 
 a=$((31 + RANDOM % 6))

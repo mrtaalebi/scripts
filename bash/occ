@@ -9,6 +9,50 @@ config_file="$HOME/.occ_data"
 ##############################
 ##############################
 
+save_vpn_data() {
+    echo 
+    if [ -f $config_file ]
+    then
+        echo "a vpn_data record saved as follows:"
+        echo
+        cat $config_file
+        echo
+        printf "do you realy want to renew vpn_data?[N/y]: "
+        read y
+        if [ "$y" = "y" ] || [ "$y" = "Y" ]
+        then
+            echo "renewing vpn_data."
+        else
+            echo "keeping vpn_data. exiting"
+            exit 0
+        fi
+    else
+        echo "this is the first time you run occ or vpn_data has been lost somehow"
+    fi
+    echo 
+    echo "so enter your vpn data as follows!"
+    echo 
+    echo "    *"
+    echo "    vpn_server_postfix is the second part of the vpn_server url common between some servers."
+    echo "    for example vpn_server_postfix for below vpn servers could be 'gozaronline.net'"
+    echo "        'gr.gozaronline.net', 'fr.gozaronline.net', 'us.gozaronline.net'"
+    echo "    *"
+    echo
+    printf "    enter vpn_server_postfix then press [ENTER]: "
+    read domain
+    echo
+    printf "    enter your username then press [ENTER]: "
+    read username
+    echo
+    printf "    enter your password then press [ENTER]: "
+    read -s password
+    echo
+
+    echo "domain:   $domain" > $config_file
+    echo "username: $username" >> $config_file
+    echo "password: $password" >> $config_file
+}
+
 grep_awk() {
     gal=`grep -i $1 $config_file | awk '{print $2}'`
 }
@@ -16,7 +60,13 @@ grep_awk() {
 connect() {
     disconnect
 
-    grep_awk "domain";   domain=$gal
+    sleep 1
+
+    if [ ! -f $config_file ]
+    then
+        save_vpn_data
+    fi
+    grep_awk "domain"  ; domain=$gal
     grep_awk "username"; username=$gal
     grep_awk "password"; password=$gal
     echo $password | sudo openconnect -b $1.$domain -u $username
@@ -29,16 +79,17 @@ disconnect () {
 
 
 help() {
-    echo "occ uses openconnect to connect and disconnect :)"
-    echo "    usage:"
-    echo "        occ <server-prefix>    connects to vpn server at server-prefix.vpn_server-postfix"
-    echo "        occ d                  disconnects!"
-    echo "        occ -h|--help          shows this help"
+    echo "    occ uses openconnect to connect and disconnect in a more suitable way :)"
     echo 
-    echo "    ALSO CONSIDER writing your vpn data in $config_file following this format:"
-    echo "        domain:   <vpn_server_postfix>"
-    echo "        username: <username>"
-    echo "        password: <password>"
+    echo "        run this command to make sure you have openconnect installed:"
+    echo "            sudo apt install openconnect"
+    echo 
+    echo "        usage:"
+    echo "            occ <server-prefix>    connects to vpn server at server_prefix.vpn_server_postfix"
+    echo "            occ d                  disconnects!"
+    echo "            occ vpndata            update vpn data (vpn_server_postfix, username, password)"
+    echo "            occ -h|--help          shows this help"
+    echo 
     exit 0
 }
 
@@ -53,6 +104,9 @@ case $1 in
 	;;
 	-h|--help)
     help
+    ;;
+    vpndata)
+    save_vpn_data
     ;;
     *)
 	connect $1

@@ -15,18 +15,12 @@ help() {
     echo "    usage:"
     echo "        to download a new file:"
     echo "            dyg <link> [param values]"
-    echo "        to continue previous downloads: (work not in progress. developer so tired.)"
-    echo "            dyg list"
-    echo "            dyg resume <download_id>(s) ..."
-    echo "    params:"
-    echo "        -n|--number    number of partitions"
-    echo "        -o|--out       output file"
-    echo "        -b|--background continue in background"
-    echo "        -h|--help      shows this help"
+    echo "        params:"
+    echo "            -n|--number    number of partitions (default: 16)"
+    echo "            -o|--out       output file (default: file basename)"
+    echo "            -b|--background continue in background (default: false)"
+    echo "            -h|--help      shows this help and exit"
     echo ""
-    echo "        link is a neccessary parameter"
-    echo "        number will be set to 16 if not given as a parameter"
-    echo "        out will be set to the name which is in url if not given as a paramater"
 }
 
 input() {    

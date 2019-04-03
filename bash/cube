@@ -1,8 +1,7 @@
 #!/bin/bash
 
 SCALE=5
-DELAY=1
-REPEATS=100
+DELAY=10
 
 draw() {
     color="48;5;$1m"
@@ -25,9 +24,9 @@ draw() {
 
         if [ $1 -ge 0 ] && [ $1 -lt 16 ]
         then
-            sleep `bc -l <<< "scale=2; $DELAY / $REPEATS * $SCALE * $SCALE"`
+            sleep $((DELAY * SCALE * SCALE))
         else
-            sleep `bc -l <<< "scale=2; $DELAY / $REPEATS"`
+            sleep $DELAY
         fi
     done
 }

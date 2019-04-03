@@ -19,7 +19,7 @@ connect() {
     grep_awk "domain";   domain=$gal
     grep_awk "username"; username=$gal
     grep_awk "password"; password=$gal
-    echo $password | sudo openconnect -b $1.$domain -u $username &> .occ_log
+    echo $password | sudo openconnect -b $1.$domain -u $username
 }
 
 

@@ -1,30 +1,35 @@
 #!/bin/bash
 
-SCALE=4
-DELAY=0.1
+SCALE=5
+DELAY=1
 REPEATS=100
 
 draw() {
     color="48;5;$1m"
     while ((1))
     do
-        for ((i=0;i<$REPEATS;i++))
+        lines=`tput lines`
+        cols=`tput cols`
+
+        len=$(( (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) % SCALE + 1 + (256 - $1) / 240 ))
+        x=$((RANDOM % ($lines / $len) * $len))
+        y=$((RANDOM % ($cols / ($len * 2)) * ($len * 2)))
+
+        for ((i=0;i<$len;i++))
         do
-            len=$(((100 * 100 * 100 * 100 - ((RANDOM * RANDOM * RANDOM * RANDOM) % (100 * 100 * 100 * 100))) % SCALE + 1))
-            x=$(((RANDOM % (`tput lines`/ $len)) * $len))
-            y=$(((RANDOM % (`tput cols` / ($len * 2))) * ($len * 2)))
-            for ((i=0;i<$len;i++))
+            for ((j=0;j<$len;j++))
             do
-                for ((j=0;j<$len;j++))
-                do
-                    printf "\e[0m\e[$((x + i));$((y + (j * 2)))H\e[$color  "
-                done
+                printf "\e[0m\e[$((x + i));$((y + (j * 2)))H\e[$color  "
             done
-            sleep `bc -l <<< "scale=2; $((len / 256 * $1)) * $((len / 256 * $1)) * $DELAY * $((RANDOM % SCALE + 1))"`
         done
-        sleep `bc -l <<< "scale=2; $SCALE * $DELAY * $REPEATS"`
+
+        if [ $1 -ge 0 ] && [ $1 -lt 16 ]
+        then
+            sleep `bc -l <<< "scale=2; $DELAY / $REPEATS * $SCALE * $SCALE"`
+        else
+            sleep `bc -l <<< "scale=2; $DELAY / $REPEATS"`
+        fi
     done
-    exit 0
 }
 
 clean() {
@@ -36,9 +41,15 @@ clean() {
 }
 
 # clean &
+printf "\e[0m\e[2J"
 
-for ((i=0;i<256;i++))
+for ((i=232;i<256;i++))
 do
+    draw $i &
+done
+for ((i=0;i<16;i++))
+do
+    sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
     draw $i &
 done
 

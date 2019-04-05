@@ -15,25 +15,42 @@ bright() {
 }
 
 
-if [[ $1 =~ [+-]{0,1}[0-9]+ ]]
+do_the_bright() {
+    if [ "$1" -ge "$max_brightness" ]
+    then
+        bright $max_brightness
+    elif [ "$1" -le "0" ]
+    then
+        bright "0"
+    else
+        bright $1
+    fi
+
+    get_current_brightness
+    percentage=`bc -l <<< "scale=10; $brightness / $max_brightness * 100"`
+    printf '%.2f%%\n' $percentage
+}
+
+
+if [[ $1 =~ [+-][0-9]+ ]]
 then
     get_current_brightness
     change=`echo $1 | tr -d +`
     expected_brightness=`bc -l <<< "scale=0; $brightness + $change * $max_brightness / 100"`
-    if [ "$expected_brightness" -ge "$max_brightness" ]
-    then
-        bright $max_brightness
-    elif [ "$expected_brightness" -le "0" ]
-    then
-        bright "0"
-    else
-        bright $expected_brightness
-    fi
-    get_current_brightness
-    echo `bc -l <<< "scale=0; $brightness * 100 / $max_brightness"`%
+    do_the_bright $expected_brightness
+
+elif [[ $1 =~ [0-9]+ ]]
+then
+    exact=`echo $1 | tr -d =`
+    expected_brightness=`bc -l <<< "scale=0; $exact * $max_brightness / 100"`
+    do_the_bright $expected_brightness
+
 else
     echo "usage:"
     echo
-    echo "x c    changes screen backlight by c percentage"
+    echo "x +c    increase backlight by c%"
+    echo "x -c    decrease backlight by c%"
+    echo "x  c    set      backlight to c%"
+
 fi
 

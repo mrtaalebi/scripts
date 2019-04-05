@@ -1,0 +1,93 @@
+#!/bin/bash
+
+
+deamon_process_name="xdeamon"
+
+brightness_file="/sys/class/backlight/intel_backlight/brightness"
+
+brightness_buffer_dir="$HOME/.backlight_deamon"
+brightness_buffer="$HOME/.backlight_deamon/command"
+
+max_brightness=`cat /sys/class/backlight/intel_backlight/max_brightness`
+   
+
+if [ `ps -C $deamon_process_name | wc -l` -eq 1 ]
+then
+    sudo rm -r $brightness_buffer_dir
+    mkdir $brightness_buffer_dir
+    sudo pkill $deamon_process_name
+    sudo $deamon_process_name
+fi
+
+
+get_current_brightness() {
+#    brightness=`cat $brightness_file`
+
+    active_pid=`xdotool getactivewindow getwindowpid`
+
+    if [ -f $brightness_buffer_dir/$active_pid ]
+    then
+        brightness=`cat "$brightness_buffer_dir/$active_pid"`
+    else
+        brightness=`cat $brightness_file`
+        echo $brightness > "$brightness_buffer_dir/$active_pid"
+    fi
+}
+
+
+bright() {
+    result=$1
+    echo $1 > $brightness_buffer_dir/$active_pid
+}
+
+
+do_the_bright() {
+    if [ "$1" -ge "$max_brightness" ]
+    then
+        bright $max_brightness
+    elif [ "$1" -le "0" ]
+    then
+        bright "0"
+    else
+        bright $1
+    fi
+    
+    echo `bc -l <<< "scale=2; $result * 100 / $max_brightness "`%
+}
+
+
+if [[ $1 =~ ^[.]$ ]]
+then
+    get_current_brightness
+    half=`bc -l <<< "scale=0; $brightness / 2"`
+    do_the_bright $half
+elif [[ $1 =~ ^[.]{2}$ ]]
+then
+    get_current_brightness
+    double=`bc -l <<< "scale=0; $brightness * 2"`
+    do_the_bright $double
+
+elif [[ $1 =~ ^[+-][0-9]+$ ]]
+then
+    get_current_brightness
+    change=`echo $1 | tr -d +`
+    expected_brightness=`bc -l <<< "scale=0; $brightness + $change * $max_brightness / 100"`
+    do_the_bright $expected_brightness
+
+elif [[ $1 =~ ^[0-9]+$ ]]
+then
+    get_current_brightness
+    exact=$1
+    expected_brightness=`bc -l <<< "scale=0; $exact * $max_brightness / 100"`
+    do_the_bright $expected_brightness
+
+else
+    echo "usage:"
+    echo
+    echo "x +c    increase backlight by c %"
+    echo "x -c    decrease backlight by c %"
+    echo "x  c    set      backlight to c %"
+    echo "x  .    halfs   current backlight"
+    echo "x ..    doubles current backlight"
+fi
+

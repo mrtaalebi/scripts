@@ -105,7 +105,7 @@ mkdir -p ~/Downloads/.dyg/log/$output
 mkdir -p ~/Downloads/.dyg/info
 cd ~/Downloads/.dyg
 
-cat $link >> .list
+echo $link >> .list
 
 echo "    writing parts info to ~/Downloads/.dyg/info/$output"
 echo "$number" > info/$output
@@ -149,7 +149,7 @@ echo
 start_sec=`date +"%s"`
 last_sum=0
 while ((1)); do
-    printf "\033[$color\033[2K\033[7m\t      downloading      \033[0m\033[$color\n"
+    printf "\033[2K\033[7m\t\033[$color      downloading      \033[0m\n"
     parts_sum=0
     for ((i=0;i < number; i++)); do
         if [ ! -f temp/$output/$i.temp ]; then
@@ -158,10 +158,10 @@ while ((1)); do
             part_size=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
         fi
         parts_sum=$((parts_sum + part_size))
-        printf "\033[2K\tpart %03d:\t%6.2f%%\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
+        printf "\033[2K\t\033[${color}part %03d:\t%6.2f%%\033[0m\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
     done
-    printf "\033[2K\033[7m\ttotal:% 16.2f%%\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
-    printf "\033[2K\033[7m\tspeed:% 12.2f MB/s\033[0m\n" `bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
+    printf "\033[2K\033[7m\t\033[${color}total:% 16.2f%%\033[0m\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
+    printf "\033[2K\033[7m\t\033[${color}speed:% 12.2f MB/s\033[0m\n" `bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
     last_sum=$parts_sum
     printf "\033[$((number + 3))A"
 
@@ -170,7 +170,7 @@ while ((1)); do
     fi
     sleep 1
 done
-printf "\033[$((number + 3))B\033[$color"
+printf "\033[$((number + 3))B"
 end_sec=`date +"%s"`
 
 
@@ -179,10 +179,10 @@ wait
 
 cd temp/$output
 list=`ls * | sort -n`
-printf "\tsuccessfully downloaded\033[$color\n"
-printf "\033[7m\tcontent:% 12.2f MB\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
-printf "\033[2K\033[7m\tin:% 18.2f m\n" `bc -l <<< "scale=4; ($end_sec - $start_sec + 1) / 60"`
-printf "\033[2K\033[7m\twith:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / ($end_sec - $start_sec + 1)"`
+printf "\t\033[${color}successfully downloaded\033[0m\n"
+printf "\033[7m\t\033[${color}content:% 12.2f MB\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
+printf "\033[2K\033[7m\t\033[${color}in:% 18.2f m\033[0m\n" `bc -l <<< "scale=4; ($end_sec - $start_sec + 1) / 60"`
+printf "\033[2K\033[7m\t\033[${color}with:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / ($end_sec - $start_sec + 1)"`
 cat $list > ../../../$output
 
 cd ../..

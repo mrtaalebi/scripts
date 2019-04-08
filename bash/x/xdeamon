@@ -6,15 +6,8 @@ actual="/sys/class/backlight/intel_backlight/brightness"
 repeat() {
     while ((1));
     do
-        active_pid=`xdotool getactivewindow getwindowpid`
-
-        if [ -f $buffer/$active_pid ]
-        then
-            sudo cat $buffer/$active_pid > $actual
-        fi
-
-        sleep 0.1
-        
+        sudo cat $buffer > $actual
+        sleep 0.2
     done
 }
 

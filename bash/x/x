@@ -4,40 +4,27 @@
 deamon_process_name="xdeamon"
 
 brightness_file="/sys/class/backlight/intel_backlight/brightness"
-
-brightness_buffer_dir="$HOME/.backlight_deamon"
-brightness_buffer="$HOME/.backlight_deamon/command"
+brightness_buffer="$HOME/.backlight_deamon"
 
 max_brightness=`cat /sys/class/backlight/intel_backlight/max_brightness`
    
 
 if [ `ps -C $deamon_process_name | wc -l` -eq 1 ]
 then
-    sudo rm -r $brightness_buffer_dir
-    mkdir $brightness_buffer_dir
+    sudo rm $brightness_buffer
     sudo pkill $deamon_process_name
     sudo $deamon_process_name
 fi
 
 
 get_current_brightness() {
-#    brightness=`cat $brightness_file`
-
-    active_pid=`xdotool getactivewindow getwindowpid`
-
-    if [ -f $brightness_buffer_dir/$active_pid ]
-    then
-        brightness=`cat "$brightness_buffer_dir/$active_pid"`
-    else
-        brightness=`cat $brightness_file`
-        echo $brightness > "$brightness_buffer_dir/$active_pid"
-    fi
+    brightness=`cat $brightness_file`
 }
 
 
 bright() {
     result=$1
-    echo $1 > $brightness_buffer_dir/$active_pid
+    echo $1 > $backlight_deamon
 }
 
 

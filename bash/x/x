@@ -11,8 +11,7 @@ max_brightness=`cat /sys/class/backlight/intel_backlight/max_brightness`
 
 if [ `ps -C $deamon_process_name | wc -l` -eq 1 ]
 then
-    sudo rm $brightness_buffer
-    sudo pkill $deamon_process_name
+    sudo rm -r $brightness_buffer
     sudo $deamon_process_name
 fi
 
@@ -24,7 +23,7 @@ get_current_brightness() {
 
 bright() {
     result=$1
-    echo $1 > $backlight_deamon
+    echo $1 > $brightness_buffer
 }
 
 

@@ -11,5 +11,6 @@ repeat() {
     done
 }
 
+sudo rm -r $buffer
 repeat &
 

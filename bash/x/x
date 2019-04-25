@@ -1,20 +1,11 @@
 #!/bin/bash
 
 
-deamon_process_name="xdeamon"
 
 brightness_file="/sys/class/backlight/intel_backlight/brightness"
-brightness_buffer="$HOME/.backlight_deamon"
 
 max_brightness=`cat /sys/class/backlight/intel_backlight/max_brightness`
    
-
-if [ `ps -C $deamon_process_name | wc -l` -eq 1 ]
-then
-    sudo rm -r $brightness_buffer
-    sudo $deamon_process_name
-fi
-
 
 get_current_brightness() {
     brightness=`cat $brightness_file`
@@ -23,7 +14,7 @@ get_current_brightness() {
 
 bright() {
     result=$1
-    echo $1 > $brightness_buffer
+    sudo bash -c "echo $1 > $brightness_file"
 }
 
 

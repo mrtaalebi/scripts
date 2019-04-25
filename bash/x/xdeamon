@@ -1,6 +1,6 @@
 #!/bin/bash
 
-buffer="$HOME/.backlight_deamon"
+buffer="/etc/.backlight_deamon"
 actual="/sys/class/backlight/intel_backlight/brightness"
 
 repeat() {

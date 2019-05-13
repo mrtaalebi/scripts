@@ -31,11 +31,11 @@ retrieve_data() {
     else
         printf "retrieve_data: file $DATA_FILE does not exist. do you want to add this record?[yes/no] "
         read res
-        if [ $res -eq "yes" ]; then
+        if [ "$res" -eq "yes" ]; then
             add_data $1
             retrieve_data $1
         else
-            echo "no? ok. exiting."
+            echo "hmm no? nice! exiting."
             exit 1
         fi
     fi
@@ -47,6 +47,7 @@ set_default() {
     file=`basename $file`
     cat $DATA_DIR/$file | sudo tee $DATA_DIR/$DATA_DEFAULT > /dev/null
 }
+
 
 connect() {
     if [ $# -eq 1 ]; then
@@ -76,13 +77,13 @@ disconnect() {
 set_default_data() {
     while : ; do
         echo "choose one of these following records as default:" 
-        ls -1 $DATA_DIR/ | egrep '(?!default)'
+	find $DATA_DIR/* ! '(' -name '*default*' ')' -printf '\t%f\n'
         read choosen
 
     	[ ! -f $DATA_DIR/$choosen ] || break
     done
 
-    cat $DATA_DIR/$choosen > $DATA_DIR/default
+    cat $DATA_DIR/$choosen | sudo tee $DATA_DIR/default > /dev/null
 }
 
 
@@ -107,15 +108,26 @@ add_data() {
 
 
 help() {
+    echo
     echo "connects to net2.sharif.edu and it is really over-engineered"
+    echo
+    echo "dependencies: curl; so run the following command to install it:"
+    echo "    sudo apt install curl"
+    echo
     echo 
     echo "usage:"
-    echo "    net2 c    connects"
-    echo "    net2 d    disconnects"
-    echo "    net2 a    add a username and password"
-    echo "    net2 s    set default username"
-
+    echo "    net2 c                connects with default user"
+    echo "    net2 c <username>     connects with selected username"
+    echo
+    echo "    net2 d                disconnects"
+    echo
+    echo "    net2 a                add a username and password"
+    echo
+    echo "    net2 s                set default username"
+    echo 
+    echo
     echo "for start there is no need to add a username or set it as default just run net2 c"
+    echo
 }
 
 

@@ -1,0 +1,144 @@
+#!/bin/bash
+
+
+DATA_DIR="/etc/net2_data"
+DATA_DEFAULT="default"
+
+sudo mkdir -p $DATA_DIR
+
+
+grep_awk() {
+    if [ $# -ne 2 ]; then
+        echo "grep_awk: expected 2 parameters (pattern and file) but $# recieved. exiting"
+        exit 1
+    fi
+
+    gal=`grep -i $1 $2 | awk '{print $2}'`
+}
+
+
+retrieve_data() {
+    if [ $# -ne 1 ]; then
+        echo "retrieve_data: expected 1 parameter (DATA_FILE) but $# recieved. exiting"
+        exit 1
+    fi
+    
+    DATA_FILE=$DATA_DIR/$1
+    if [ -f $DATA_FILE ]; then
+        grep_awk "username" "$DATA_FILE"; username=$gal
+        grep_awk "password" "$DATA_FILE"; password=$gal
+        return 0
+    else
+        printf "retrieve_data: file $DATA_FILE does not exist. do you want to add this record?[yes/no] "
+        read res
+        if [ $res -eq "yes" ]; then
+            add_data $1
+            retrieve_data $1
+        else
+            echo "no? ok. exiting."
+            exit 1
+        fi
+    fi
+}
+
+
+set_default() {
+    file=`ls -1 $DATA_DIR/*`
+    file=`basename $file`
+    cat $DATA_DIR/$file | sudo tee $DATA_DIR/$DATA_DEFAULT > /dev/null
+}
+
+connect() {
+    if [ $# -eq 1 ]; then
+        retrieve_data $1
+    elif [ $# -eq 0 ]; then
+        if [ -f $DATA_DIR/$DATA_DEFAULT ]; then
+            echo 
+        elif [ ! -f $DATA_DIR/$DATA_DEFAULT ] && [ `ls -1 $DATA_DIR/ | wc -l` -eq 1 ] ; then
+            set_default
+        else
+            echo "connect: no record found. adding data."
+            add_data
+            set_default
+        fi
+        retrieve_data $DATA_DEFAULT
+    fi
+
+    curl -Lsd "username=$username&password=$password" -X POST https://net2.sharif.edu/login > /dev/null
+}
+
+
+disconnect() {
+    curl -L https://net2.sharif.edu/logout > /dev/null
+}
+
+
+set_default_data() {
+    while : ; do
+        echo "choose one of these following records as default:" 
+        ls -1 $DATA_DIR/ | egrep '(?!default)'
+        read choosen
+
+    	[ ! -f $DATA_DIR/$choosen ] || break
+    done
+
+    cat $DATA_DIR/$choosen > $DATA_DIR/default
+}
+
+
+add_data() {
+    echo "add a record"
+    
+    while : ; do
+        printf "enter username and press [ENTER]: "
+        read username
+
+        [ -f $DATA_DIR/$username ] || break
+    done
+
+    echo $username
+
+    printf "enter password and press [ENTER]: "
+    read -s password
+
+    echo "username $username" | sudo tee $DATA_DIR/$username > /dev/null
+    echo "password $password" | sudo tee -a $DATA_DIR/$username > /dev/null
+}
+
+
+help() {
+    echo "connects to net2.sharif.edu and it is really over-engineered"
+    echo 
+    echo "usage:"
+    echo "    net2 c    connects"
+    echo "    net2 d    disconnects"
+    echo "    net2 a    add a username and password"
+    echo "    net2 s    set default username"
+
+    echo "for start there is no need to add a username or set it as default just run net2 c"
+}
+
+
+if [ $# -lt 1 ]; then
+    help
+    exit
+fi
+
+case $1 in 
+    c)
+        shift
+        connect $@
+        ;;
+    d)
+        disconnect
+        ;;
+    s)
+        set_default_data
+        ;;
+    a)
+        add_data
+        ;;
+    *)
+        help
+        ;;
+esac

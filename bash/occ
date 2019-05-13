@@ -1,14 +1,7 @@
 #!/bin/bash
 
 
-##############################
-##############################
-
-mkdir -p /etc/occ/
 config_file="/etc/occ/vpn_data"
-
-##############################
-##############################
 
 save_vpn_data() {
     echo 
@@ -49,9 +42,12 @@ save_vpn_data() {
     read -s password
     echo
 
-    echo "domain:   $domain" > $config_file
-    echo "username: $username" >> $config_file
-    echo "password: $password" >> $config_file
+    config="$HOME/vpn_data"
+    echo "domain:   $domain" > $config
+    echo "username: $username" >> $config
+    echo "password: $password" >> $config
+    sudo mkdir -p /etc/occ && sudo cp $config /etc/occ
+    rm $config
 }
 
 grep_awk() {
@@ -95,20 +91,20 @@ help() {
 }
 
 
-if (($# == 0)); then
+if (($# != 1)); then
     help
 fi
 
 case $1 in
-	d )
+    d)
 	disconnect
 	;;
-	-h|--help)
-    help
-    ;;
+    -h|--help)
+        help
+        ;;
     vpndata)
-    save_vpn_data
-    ;;
+        save_vpn_data
+        ;;
     *)
 	connect $1
 	;;

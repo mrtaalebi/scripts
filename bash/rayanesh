@@ -1,15 +1,19 @@
 #!/bin/bash
 
 
-response=rayanesh_response
-log_file=rayanesh_log
-
-
 delay=60
 limit=400
 
 username=`echo $1 | cut -d'&' -f 1 | cut -d'=' -f 2`
 token=`echo $1 | cut -d'#' -f 1 | cut -d'=' -f 3`
+
+response_dir=.rayanesh_response
+mkdir -p $response_dir
+response_file=$response_dir/$username
+
+log_dir=.rayanesh_log
+mkdir -p $log_dir
+log_file=$log_dir/$username
 
 
 echo `date` >> $log_file
@@ -23,9 +27,9 @@ while [ true ]; do
 
         x=$((RANDOM % limit))
         s={\"username\":\"$username\",\"token\":\"$token\",\"wp\":\"$x\",\"alternative\":\"$x\"}
-        curl -s -X POST -H "Content-Type: application/json" -d "$s" http://rayanesh-game.herokuapp.com/change.php > $response
+        curl -s -X POST -H "Content-Type: application/json" -d "$s" http://rayanesh-game.herokuapp.com/change.php > $response_file
 
-        result=`cat $response | cut -d':' -f 2 | cut -d',' -f 1 | cut -d'}' -f 1`
+        result=`cat $response_file | cut -d':' -f 2 | cut -d',' -f 1 | cut -d'}' -f 1`
         count=$((count+1))
         printf '%d\t%s\t%s\n' $x $result "`date`" | tee -a $log_file
 

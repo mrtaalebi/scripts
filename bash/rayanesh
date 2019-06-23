@@ -1,0 +1,35 @@
+#!/bin/bash
+
+
+response=rayanesh_response
+log_file=rayanesh_log
+
+
+delay=60
+limit=400
+
+username=`echo $1 | cut -d'&' -f 1 | cut -d'=' -f 2`
+token=`echo $1 | cut -d'#' -f 1 | cut -d'=' -f 3`
+
+
+echo `date` >> $log_file
+while [ true ]; do 
+
+    sleep $delay
+
+    result=true
+    count=-1
+    while [ "$result" = "true" ]; do
+
+        x=$((RANDOM % limit))
+        s={\"username\":\"$username\",\"token\":\"$token\",\"wp\":\"$x\",\"alternative\":\"$x\"}
+        curl -s -X POST -H "Content-Type: application/json" -d "$s" http://rayanesh-game.herokuapp.com/change.php > $response
+
+        result=`cat $response | cut -d':' -f 2 | cut -d',' -f 1 | cut -d'}' -f 1`
+        count=$((count+1))
+        printf '%d\t%s\t%s\n' $x $result "`date`" | tee -a $log_file
+
+    done
+
+done
+

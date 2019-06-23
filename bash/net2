@@ -4,8 +4,6 @@
 DATA_DIR="/etc/net2_data"
 DATA_DEFAULT="default"
 
-sudo mkdir -p $DATA_DIR
-
 
 grep_awk() {
     if [ $# -ne 2 ]; then
@@ -49,7 +47,13 @@ set_default() {
 }
 
 
+sure_dir() {
+    sudo mkdir -p $DATA_DIR
+}
+
+
 connect() {
+    sure_dir
     if [ $# -eq 1 ]; then
         retrieve_data $1
     elif [ $# -eq 0 ]; then
@@ -70,11 +74,13 @@ connect() {
 
 
 disconnect() {
+    sure_dir
     curl -L https://net2.sharif.edu/logout > /dev/null
 }
 
 
 set_default_data() {
+    sure_dir
     while : ; do
         echo "choose one of these following records as default:" 
 	find $DATA_DIR/* ! '(' -name '*default*' ')' -printf '\t%f\n'
@@ -88,6 +94,7 @@ set_default_data() {
 
 
 add_data() {
+    sure_dir
     echo "add a record"
     
     while : ; do
@@ -154,3 +161,4 @@ case $1 in
         help
         ;;
 esac
+

@@ -87,13 +87,13 @@ output=""
 
 input "$@"
 
-head=`curl --head $link 2>&1`
+head=`curl -L --head $link 2>&1`
 if [ -z "$head" ]; then
     echo "server has not responded to head request, exiting"
     exit 1
 fi
 
-length=`curl --head $link 2>&1 | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
+length=`curl -L --head $link 2>&1 | grep --ignore-case "content-length: [0-9]*" | awk '{print $2}' | dos2unix`
 if [ -z "$length" ]; then
     echo "server bad response to curl --head $link, exiting"
     exit 1
@@ -128,7 +128,7 @@ for ((i=0; i < number; i++)); do
         range="$start_from-$((byte_on + part_length - 1))"
     fi
     let "byte_on+=part_length"
-    curl -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
+    curl -L -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
 done
 
 

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for x in .rayanesh_log/*; do
+    name=`echo $x | cut -d'/' -f2`
+    count=`grep -rnw $x -e true | wc -l`
+    changes=`grep -rnw $x -e "true" | awk '{print $1}' | cut -d':' -f2 | tail -15 | tr '\n' '\t'`
+    printf '% 15s\t%s\t%s\n' "$name" "$count" "$changes"
+done
+
+ 

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+
+
+
+
+
+
+curl -s rayanesh-game.herokuapp.com/storyPlz.php > .story
+echo -e $(<.story)
+exit
+
+story=`cat .story`
+new_story=""
+for x in $story; do
+    is_int=true
+    len=${#x}
+    for ((i=1;i<=$len;i++)); do
+        c=`echo $x | cut -c$i`
+        echo $c
+        c=`echo $c | od -A`
+        echo $c
+        if [ $c -lt 0 ] || [ $c -gt 9 ]; then
+            is_int=false
+            break
+        fi
+    done
+    if [ $is_int ]; then
+        new_story="$new_story $x"
+    else
+        new_story="$new_story x"
+    fi
+done
+
+echo $new_story
+

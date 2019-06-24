@@ -26,6 +26,13 @@ while [ true ]; do
     while [ "$result" = "true" ]; do
 
         x=$((RANDOM % limit))
+        while [ true ]; do
+            x=$(( (x+1) % limit))
+            word=`curl -s -X POST rayanesh-game.herokuapp.com/storyPlz.php | cut -d':' -f 2 | cut -d' ' -f $((x + 1)) | tr -d \" | tr -d \{ | tr -d \}`
+            if [ "$x" != "$word" ]; then break; fi
+            sleep 1
+        done
+
         s={\"username\":\"$username\",\"token\":\"$token\",\"wp\":\"$x\",\"alternative\":\"$x\"}
         curl -s -X POST -H "Content-Type: application/json" -d "$s" http://rayanesh-game.herokuapp.com/change.php > $response_file
 

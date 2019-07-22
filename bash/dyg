@@ -25,6 +25,10 @@ help() {
     echo "        dyg list"
     echo "            lists all incomplete downloads in two columns: id and link"
     echo "        dyg resume <id>"
+    echo "            resumes a paused or interrupted download"
+    echo '            id: link id from `dyg list` command'
+    echo "        dyg del <id>"
+    echo "            deletes download with given id's info and temp"
     echo '            id: link id from `dyg list` command'
     echo ""
 }
@@ -127,12 +131,13 @@ list_downloads() {
         exit 1
     fi
 
-    printf 'id\tfilename\tlink\n'
+    printf 'id\tfinished\tfilename\tlink\n'
     list=`ls $DYG_DIR/* | sort -n`
     for f in $list; do
         grep_awk "link" $f; l="$gal"
         grep_awk "filename" $f; n="$gal"
-        printf '%s\t%s\t%s\n' `basename $f` $n $l
+        grep_awk "finished" $f; d="$gal"
+        printf '%s\t%s\t%s\t%s\n' `basename $f` $d $n $l
     done
 
     exit 0
@@ -149,6 +154,12 @@ resume_download() {
     for f in $list; do
         if [ `basename $f` = $1 ]; then
 
+            grep_awk "finished" $f; finished="$gal"
+            if [ $finished = "1" ]; then
+                echo "download finished. you could download it from database by running \`dyg del $id\`. exiting."
+                exit 1
+            fi
+
             INFO_FILE=$f
 
             grep_awk "link" $f; link=$gal
@@ -161,6 +172,29 @@ resume_download() {
     done
 
     return 1
+}
+
+del_download() {
+
+    if ! [ $# -eq 1 ]; then
+        echo "del_download recieved $# args. 1 expected. exiting."
+        exit 1
+    fi
+    
+    INFO_FILE=$DYG_DIR/$1
+    if ! [ -f $INFO_FILE ]; then
+        echo "download with $1 id doesn't exist. exiting."
+        exit 1
+    fi
+
+    grep_awk "filename" $INFO_FILE; filename=$gal
+    grep_awk "dir" $INFO_FILE; temp_dir=$gal/.dyg/$filename
+
+    rm -r $temp_dir
+    rm $INFO_FILE
+
+    echo "deleted successfully"
+    exit 0
 }
 
 input() {    
@@ -181,6 +215,10 @@ input() {
         "resume")
             shift
             resume_download $@
+            ;;
+        "del")
+            shift
+            del_download $@
             ;;
         *)
             help
@@ -206,6 +244,10 @@ stop_all() {
     grep_awk "time" $INFO_FILE; total_time=$gal
     total_time=$((total_time + `date +"%s"` - start_sec))
     sed -i "/time/c time $total_time" $INFO_FILE
+
+    if [ "$1" = "no_exit" ]; then
+        return 0
+    fi
 
     pkill -P $$
     exit 1
@@ -248,7 +290,7 @@ for ((i=0; i < number; i++)); do
     else
         range="$start_from-$((byte_on + part_length - 1))"
     fi
-    byte_on+=$((byte_on + part_length))
+    byte_on=$((byte_on + part_length))
     curl -L -s -H "Range: bytes=$range" --get $link >> $part_file 2>&1 &
 done
 
@@ -298,7 +340,7 @@ end_sec=`date +"%s"`
 
 wait
 
-stop_all ""
+stop_all "no_exit"
 
 grep_awk "time" "$INFO_FILE"; total_time=$gal
 

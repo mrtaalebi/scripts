@@ -13,26 +13,44 @@ help() {
     echo "    *******************************************************************************"
     echo ""
     echo "    usage:"
-    echo "        to download a new file:"
-    echo "            dyg <link> [param values]"
-    echo "        params:"
-    echo "            -n|--number    number of partitions (default: 16)"
-    echo "            -o|--out       output file (default: file basename)"
-    echo "            -b|--background continue in background (default: false)"
-    echo "            -h|--help      shows this help and exit"
+    echo "        dyg new <link> [param values]"
+    echo "            starts a new download"
+    echo "            params:"
+    echo "                -n|--number    number of partitions (default: 16)"
+    echo '                -f|--filename  file name to save (default: `basename $link``'
+    echo '                -d|--dir       abs path to save directory (default: $HOME/Downloads/'
+    echo "                -b|--background continue in background (default: false)"
+    echo "                -h|--help      shows this help and exit"
+    echo ""
+    echo "        dyg list"
+    echo "            lists all incomplete downloads in two columns: id and link"
+    echo "        dyg resume <id>"
+    echo '            id: link id from `dyg list` command'
     echo ""
 }
 
-input() {    
-    if (($# < 1)); then
-        help
+
+DYG_DIR="$HOME/.dyg"
+mkdir -p $DYG_DIR
+
+grep_awk() {
+    if [ $# -ne 2 ]; then
+        echo "grep_awk: expected 2 parameters (pattern and file) but $# recieved. exiting"
         exit 1
     fi
 
-    link="$1"
-    shift
+    gal=`grep -i $1 $2 | awk '{print $2}'`
+}
 
-    background=0
+new_download() {
+    
+    if [ $# == 0 ]; then
+        echo "new download missing link. exiting"
+        exit 1
+    fi
+
+    link=$1
+    shift
 
     while (($# > 0)); do
         case "$1" in
@@ -41,8 +59,13 @@ input() {
                 shift
                 shift
                 ;;
-            -o|--out)
-                output="$2"
+            -f|--filename)
+                filename="$2"
+                shift
+                shift
+                ;;
+            -d|--dir)
+                dir="$2"
                 shift
                 shift
                 ;;
@@ -50,42 +73,146 @@ input() {
                 background=1
                 shift
                 ;; 
-            -h|--help|*)
-                help 
-                exit 0
-                shift
-                ;;
         esac
     done;
 
-    if [ -z "$link" ]; then
-        echo "link not given, exiting"
-        exit 0
-    fi
 
-    if [ -z "$output" ]; then
-        output=`basename $link`
+    if [ -z "$filename" ]; then
+        filename=`basename $link`
     fi
-    if [ -f ~/Downloads/$output ]; then
-        echo "    file already exists, exiting"
-        exit 0
+    if [ -z "$dir" ]; then
+        dir="$HOME/Downloads"
     fi
-    echo "    saving to ~/Downloads/$output"
-
-    if [ -f ~/Downloads/.dyg/info/$output ]; then
-        number=`cat ~/Downloads/.dyg/info/$output`
-    elif [ -z "$number" ]; then
+    if [ -z "$number" ]; then
         number=16
     fi
-    echo "    downloading in $number processes"
+    out="$dir/$filename"
+    if [ -f "$out" ]; then
+        echo "a file with same name already exists in $out"
+        echo "check it out. exiting!"
+        exit 1
+    fi
+
+    for f in $DYG_DIR/*; do
+        grep_awk "link" "$f"; l="$gal"
+        if [ "$l" = "$link" ]; then
+            echo 'same link exists to resume. use `dyg list` to find it. exiting'
+            exit 1
+        fi
+    done
+
+    i=0
+    while [ 1 ]; do
+        if ! [ -f $DYG_DIR/$i ]; then
+            id=$i
+            break
+        fi
+        i=$((i + 1))
+    done
+    INFO_FILE=$DYG_DIR/$id
+
+    echo "link $link" > $INFO_FILE
+    echo "filename $filename" >> $INFO_FILE
+    echo "number $number" >> $INFO_FILE
+    echo "out $out" >> $INFO_FILE
+    echo "dir $dir" >> $INFO_FILE
+    echo "time 1" >> $INFO_FILE
+    echo "finished 0" >> $INFO_FILE
+}
+
+list_downloads() {
+    
+    if ! [ $# -eq 0 ]; then
+        echo "list downloads recieved more than zere arguement. exiting."
+        exit 1
+    fi
+
+    printf 'id\tfilename\tlink\n'
+    list=`ls $DYG_DIR/* | sort -n`
+    for f in $list; do
+        grep_awk "link" $f; l="$gal"
+        grep_awk "filename" $f; n="$gal"
+        printf '%s\t%s\t%s\n' `basename $f` $n $l
+    done
+
+    exit 0
+}
+
+resume_download() {
+    
+    if ! [ $# -eq 1 ]; then
+        echo "resume download recieved more than one arguement. exiting."
+        exit 1
+    fi
+    
+    list=`ls $DYG_DIR/* | sort -n`
+    for f in $list; do
+        if [ `basename $f` = $1 ]; then
+
+            INFO_FILE=$f
+
+            grep_awk "link" $f; link=$gal
+            grep_awk "filename" $f; filename=$gal
+            grep_awk "number" $f; number=$gal
+            grep_awk "out" $f; out=$gal
+            grep_awk "dir" $f; dir=$gal
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+input() {    
+    if [ $# -eq 0 ]; then
+        help
+        exit 0
+    fi
+
+    case $1 in
+        "new")
+            shift
+            new_download $@
+            ;;
+        "list")
+            shift
+            list_downloads $@
+            ;;
+        "resume")
+            shift
+            resume_download $@
+            ;;
+        *)
+            help
+            exit 0
+            ;;
+    esac
 }
 
 
 link=""
 number=""
-output=""
-
+filename=""
+dir=""
 input "$@"
+
+start_dir="$PWD"
+
+stop_all() {
+    if [ "$1" = "finished" ]; then
+        sed -i "/finished/c finished 1" $INFO_FILE
+    fi
+
+    grep_awk "time" $INFO_FILE; total_time=$gal
+    total_time=$((total_time + `date +"%s"` - start_sec))
+    sed -i "/time/c time $total_time" $INFO_FILE
+
+    pkill -P $$
+    exit 1
+}
+
+trap stop_all HUP INT QUIT TERM EXIT
+
 
 head=`curl -L --head $link 2>&1`
 if [ -z "$head" ]; then
@@ -99,23 +226,17 @@ if [ -z "$length" ]; then
     exit 1
 fi
 
+TEMP_DIR="$dir/.dyg/$filename/"
+mkdir -p $TEMP_DIR
 
-mkdir -p ~/Downloads/.dyg/temp/$output
-mkdir -p ~/Downloads/.dyg/log/$output
-mkdir -p ~/Downloads/.dyg/info
-cd ~/Downloads/.dyg
-
-echo $link >> .list
-
-echo "    writing parts info to ~/Downloads/.dyg/info/$output"
-echo "$number" > info/$output
 byte_on=0
 part_length=`bc -l <<< "scale=0; $length / $number"`
 for ((i=0; i < number; i++)); do
-    if [ -f temp/$output/$i.temp ]; then
-        currently_downloaded=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
+    part_file=$TEMP_DIR/$i.temp
+    if [ -f $part_file ]; then
+        currently_downloaded=`stat -c '%n %s' $part_file | awk '{print $2}'`
         if [ $currently_downloaded -ge $part_length ]; then
-            let "byte_on+=part_length" 
+            byte_on=$((byte_on + part_length))
             continue
         fi
         start_from=`bc -l <<< "scale=0; $currently_downloaded + $byte_on"`
@@ -127,12 +248,12 @@ for ((i=0; i < number; i++)); do
     else
         range="$start_from-$((byte_on + part_length - 1))"
     fi
-    let "byte_on+=part_length"
-    curl -L -s -H "Range: bytes=$range" --get $link >> temp/$output/$i.temp 2>&1 &
+    byte_on+=$((byte_on + part_length))
+    curl -L -s -H "Range: bytes=$range" --get $link >> $part_file 2>&1 &
 done
 
 
-if [ $background -eq 1 ]; then
+if [ $background ]; then
     echo "    continuing in background"
     kill -SIGSTOP $$
     kill -SIGCONT $$
@@ -152,10 +273,11 @@ while ((1)); do
     printf "\033[2K\033[7m\t\033[$color      downloading      \033[0m\n"
     parts_sum=0
     for ((i=0;i < number; i++)); do
-        if [ ! -f temp/$output/$i.temp ]; then
+        file=$TEMP_DIR/$i.temp
+        if [ ! -f $file ]; then
             part_size=0
         else
-            part_size=`stat -c '%n %s' temp/$output/$i.temp | awk '{print $2}'`
+            part_size=`stat -c '%n %s' $file | awk '{print $2}'`
         fi
         parts_sum=$((parts_sum + part_size))
         printf "\033[2K\t\033[${color}part %03d:\t%6.2f%%\033[0m\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
@@ -164,7 +286,7 @@ while ((1)); do
     printf "\033[2K\033[7m\t\033[${color}speed:% 12.2f MB/s\033[0m\n" `bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
     last_sum=$parts_sum
     printf "\033[$((number + 3))A"
-
+     
     if [ "$parts_sum" -eq "$length" ]; then
         break;
     fi
@@ -176,15 +298,25 @@ end_sec=`date +"%s"`
 
 wait
 
+stop_all ""
 
-cd temp/$output
-list=`ls * | sort -n`
+grep_awk "time" "$INFO_FILE"; total_time=$gal
+
 printf "\t\033[${color}successfully downloaded\033[0m\n"
 printf "\033[7m\t\033[${color}content:% 12.2f MB\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
-printf "\033[2K\033[7m\t\033[${color}in:% 18.2f m\033[0m\n" `bc -l <<< "scale=4; ($end_sec - $start_sec + 1) / 60"`
-printf "\033[2K\033[7m\t\033[${color}with:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / ($end_sec - $start_sec + 1)"`
-cat $list > ../../../$output
+printf "\033[2K\033[7m\t\033[${color}in:% 18.2f m\033[0m\n" `bc -l <<< "scale=4; $total_time / 60"`
+printf "\033[2K\033[7m\t\033[${color}with:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / $total_time)"`
 
-cd ../..
-rm -r temp/$output*
+
+
+cd $TEMP_DIR
+list=`ls * | sort -n`
+
+for f in $list; do
+    cat $f >> $out
+done
+
+rm -r $TEMP_DIR
+
+stop_all "finished"
 

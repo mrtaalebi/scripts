@@ -25,15 +25,19 @@ while [ true ]; do
     count=-1
     while [ "$result" = "true" ]; do
 
+        w="KTHA KTSA"
+        ww=`echo $w | cut -d' ' -f $((RANDOM % 2 + 1))`
+        echo $ww
         x=$((RANDOM % limit))
         while [ true ]; do
             x=$(( (x+1) % limit))
             word=`curl -s -X POST rayanesh-game.herokuapp.com/storyPlz.php | cut -d':' -f 2 | cut -d' ' -f $((x + 1)) | tr -d \" | tr -d \{ | tr -d \}`
-            if [ "$x" != "$word" ]; then break; fi
+            # if [ "$x" != "$word" ]; then break; fi
+            if [ "$ww" != "$word" ]; then break; fi
             sleep 1
         done
 
-        s={\"username\":\"$username\",\"token\":\"$token\",\"wp\":\"$x\",\"alternative\":\"$x\"}
+        s={\"username\":\"$username\",\"token\":\"$token\",\"wp\":\"$x\",\"alternative\":\"$ww\"}
         curl -s -X POST -H "Content-Type: application/json" -d "$s" http://rayanesh-game.herokuapp.com/change.php > $response_file
 
         result=`cat $response_file | cut -d':' -f 2 | cut -d',' -f 1 | cut -d'}' -f 1`

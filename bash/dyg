@@ -347,7 +347,7 @@ grep_awk "time" "$INFO_FILE"; total_time=$gal
 printf "\t\033[${color}successfully downloaded\033[0m\n"
 printf "\033[7m\t\033[${color}content:% 12.2f MB\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024"`
 printf "\033[2K\033[7m\t\033[${color}in:% 18.2f m\033[0m\n" `bc -l <<< "scale=4; $total_time / 60"`
-printf "\033[2K\033[7m\t\033[${color}with:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / $total_time)"`
+printf "\033[2K\033[7m\t\033[${color}with:% 13.2f MB/s\033[0m\n" `bc -l <<< "scale=4; $length / 1024 / 1024 / $total_time"`
 
 
 

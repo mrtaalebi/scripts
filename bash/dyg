@@ -5,7 +5,6 @@
 help() {
     echo ""
     echo "    dyg stands for DownYouGo and is a cli multi-proccess download manager"
-    echo "    downloaded files will be saved to ~/Downloads/"
     echo ""
     echo "    *******************************************************************************"
     echo "    to make sure you have all the following requirements installed run the command:"
@@ -22,11 +21,13 @@ help() {
     echo "                -b|--background continue in background (default: false)"
     echo "                -h|--help      shows this help and exit"
     echo ""
-    echo "        dyg list"
-    echo "            lists all incomplete downloads in two columns: id and link"
+    echo "        dyg list done|togo"
+    echo "            lists all completed/incomplete downloads' info respectively"
+    echo ""
     echo "        dyg resume <id>"
     echo "            resumes a paused or interrupted download"
     echo '            id: link id from `dyg list` command'
+    echo ""
     echo "        dyg del <id>"
     echo "            deletes download with given id's info and temp"
     echo '            id: link id from `dyg list` command'
@@ -97,7 +98,7 @@ new_download() {
         exit 1
     fi
 
-    for f in $DYG_DIR/*; do
+    for f in `ls $DYG_DIR/* | sort -n`; do
         grep_awk "link" "$f"; l="$gal"
         if [ "$l" = "$link" ]; then
             echo 'same link exists to resume. use `dyg list` to find it. exiting'
@@ -126,18 +127,33 @@ new_download() {
 
 list_downloads() {
     
-    if ! [ $# -eq 0 ]; then
-        echo "list downloads recieved more than zere arguement. exiting."
+    if ! [ $# -eq 1 ]; then
+        echo "list downloads recieved more than 1 arguement or none. exiting."
+        exit 1
+    fi
+
+    if [ "$1" == "done" ]; then
+        list_status=1
+    elif [ "$1" == "togo" ]; then
+        list_status=0
+    else
+        echo "unknown list $1 command. try list done or list togo. exiting"
         exit 1
     fi
 
     printf 'id\tfinished\tfilename\tlink\n'
-    list=`ls $DYG_DIR/* | sort -n`
-    for f in $list; do
+    pwd=$PWD
+    cd $DYG_DIR
+    list=`ls * | sort -n`
+    cd $pwd
+    for x in $list; do
+        f=$DYG_DIR/$x
         grep_awk "link" $f; l="$gal"
         grep_awk "filename" $f; n="$gal"
         grep_awk "finished" $f; d="$gal"
-        printf '%s\t%s\t%s\t%s\n' `basename $f` $d $n $l
+        if [ $d -eq $list_status ]; then
+            printf '%s\t%s\t%s\t%s\n' `basename $f` $d $n $f
+        fi
     done
 
     exit 0

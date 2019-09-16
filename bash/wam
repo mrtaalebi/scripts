@@ -1,0 +1,5 @@
+#!/bin/bash
+
+help() {
+    echo "wam or Watch A Movie randomly selects a movie from a directory
+}

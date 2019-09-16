@@ -128,7 +128,7 @@ new_download() {
 list_downloads() {
     
     if ! [ $# -eq 1 ]; then
-        echo "list downloads recieved more than 1 arguement or none. exiting."
+        echo "list downloads except 1 argument: done, togo. exiting."
         exit 1
     fi
 

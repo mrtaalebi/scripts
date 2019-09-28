@@ -100,7 +100,8 @@ new_download() {
 
     for f in `ls $DYG_DIR/* | sort -n`; do
         grep_awk "link" "$f"; l="$gal"
-        if [ "$l" = "$link" ]; then
+        grep_awk "finished" "$f"; fin="$gal"
+        if [ "$l" = "$link" ] && [ "$fin" == "0" ]; then
             echo 'same link exists to resume. use `dyg list` to find it. exiting'
             exit 1
         fi
@@ -341,9 +342,12 @@ while ((1)); do
         printf "\033[2K\t\033[${color}part %03d:\t%6.2f%%\033[0m\n" "$i" `bc -l <<< "scale=4; $part_size / $part_length * 100"`
     done
     printf "\033[2K\033[7m\t\033[${color}total:% 16.2f%%\033[0m\n" `bc -l <<< "scale=4; $parts_sum / $length * 100"`
-    printf "\033[2K\033[7m\t\033[${color}speed:% 12.2f MB/s\033[0m\n" `bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
+    speed=`bc -l <<< "scale=4; ($parts_sum - $last_sum) / 1024 / 1024"`
+    printf "\033[2K\033[7m\t\033[${color}speed:% 12.2f MB/s\033[0m\n" $speed
+    printf "\033[2K\033[7m\t\033[${color}remaining:% 9.2f min\033[0m\n" `bc -l <<< "scale=4; ($length - $parts_sum) / $speed / 1024 / 1024 / 60"`
+
     last_sum=$parts_sum
-    printf "\033[$((number + 3))A"
+    printf "\033[$((number + 4))A"
      
     if [ "$parts_sum" -eq "$length" ]; then
         break;

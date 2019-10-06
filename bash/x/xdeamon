@@ -1,16 +1,21 @@
 #!/bin/bash
 
-buffer="/etc/xdeamon"
+buffer="/etc/.backlight_deamon"
 actual="/sys/class/backlight/intel_backlight/brightness"
 
 repeat() {
     while ((1));
     do
-        sudo cat $buffer > $actual
-        sleep 0.2
+        active_pid=`xdotool getactivewindow getwindowpid`
+        if [ -f $buffer/$active_pid ]
+        then
+            sudo cat $buffer/$active_pid > $actual
+        fi
+
+        sleep 0.1
+        
     done
 }
 
-sudo rm -r $buffer
 repeat &
 

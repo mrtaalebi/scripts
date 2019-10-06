@@ -1,11 +1,23 @@
 #!/bin/bash
 
 
+brightness_file="/sys/class/backlight/intel_backlight/brightness"
 
-brightness_file="/etc/xdeamon"
+brightness_buffer_dir="/etc/.backlight_deamon"
+brightness_buffer="/etc/.backlight_deamon/command"
 
 max_brightness=`cat /sys/class/backlight/intel_backlight/max_brightness`
    
+
+if [ `ps -C $deamon_process_name | wc -l` -eq 1 ]
+then
+    sudo rm -r $brightness_buffer_dir
+    sudo mkdir $brightness_buffer_dir
+    sudo chmod 777 $brightness_buffer_dir
+    sudo pkill $deamon_process_name
+    sudo $deamon_process_name
+fi
+
 
 get_current_brightness() {
     brightness=`cat $brightness_file`

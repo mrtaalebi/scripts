@@ -3,6 +3,10 @@
 buffer="/etc/.backlight_deamon"
 actual="/sys/class/backlight/intel_backlight/brightness"
 
+sudo rm -r $buffer
+sudo mkdir $buffer
+sudo chmod 777 $buffer
+
 repeat() {
     while ((1));
     do

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+deamon_process_name="xdeamon"
 
 brightness_file="/sys/class/backlight/intel_backlight/brightness"
 

@@ -64,10 +64,17 @@ connect() {
         save_vpn_data
     fi
     grep_awk "domain"  ; domain=$gal
+    if ! [ -z $domain ]; then domain=.$domain; fi
     grep_awk "username"; username=$gal
     grep_awk "password"; password=$gal
 
-    echo $password | sudo openconnect -b $1.$domain -u $username --servercert pin-sha256:NL/w7ITxj3LbphQjQivM+FKVg31zdWPiCaplCbn/2K4=
+    echo $password | sudo openconnect -b $1$domain -u $username &> out
+    cert=$(grep "servercert" out | head -1)
+    if ! [ -z "$cert" ]; then
+        echo $password | sudo openconnect -b $1$domain -u $username $cert &> out
+    fi
+    cat out
+    rm out
 }
 
 

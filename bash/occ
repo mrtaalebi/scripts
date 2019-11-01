@@ -2,6 +2,10 @@
 
 
 config_file="/etc/occ/vpn_data"
+vpnlist_file="/etc/occ/vpn_list"
+bestlist_file="/etc/occ/best_list"
+ping_buff="/etc/occ/ping_buff"
+
 
 save_vpn_data() {
     echo 
@@ -50,49 +54,150 @@ save_vpn_data() {
     rm $config
 }
 
+
+validate_vpnlist() {
+    ! [ -f $vpnlist_file ] && return 1
+
+    i=0
+    while IFS= read -r line;
+    do
+        i=$((i + 1))
+        if ! [ `echo $line | grep -Ec '^((http|https):\/\/)?(\w+\.)+\w+(:\d{1,5})?$'` = 1 ]
+        then
+            echo "    invalid vpnlist format in line $i"
+            echo "        $line"
+            return 1
+        fi
+    done < $vpnlist_file
+    return 0
+}
+
+
+save_vpn_list() {
+    echo
+    if [ -f $vpnlist_file ]
+    then
+        if validate_vpnlist
+        then
+            echo "a vpnlist file already exists as follows:"
+            echo
+            cat $vpnlist_file
+            echo
+            printf "    do you want to change it?[N/y]: "
+            read change
+            if ! [ `echo $change | grep -Ec 'y|Y'` = 1 ]
+            then
+                echo "    keeping vpnlist. exiting."
+                exit 0
+            fi
+        fi
+    fi
+
+    echo "    editing vpnlist file"
+    echo "    vpnlist file should follow the format below:"
+    echo "        - each line must be exactly url of a vpn server"
+    echo
+    printf "    press any key to open vpnlist file in default text editor: "
+    read anykey
+
+    while true
+    do
+        sudo $EDITOR $vpnlist_file
+        if validate_vpnlist
+        then
+            echo "    saving vpnlist. exiting."
+            exit 0
+        else
+            printf "    invalid vpnlist format. press any key to fix it, 'a' to abort[a]: "
+            read key
+            if [[ $key =~ "a" ]]
+            then
+                echo "    aborting."
+                exit 1
+            fi
+        fi
+    done
+    
+}
+
+
 grep_awk() {
     gal=`grep -i $1 $config_file | awk '{print $2}'`
 }
 
+
 connect() {
-    disconnect
+    grep_awk "username" && username=$gal
+    grep_awk "password" && password=$gal
 
-    sleep 1
-
-    if [ ! -f $config_file ]
-    then
-        save_vpn_data
-    fi
-    grep_awk "domain"  ; domain=$gal
-    if ! [ -z $domain ]; then domain=.$domain; fi
-    grep_awk "username"; username=$gal
-    grep_awk "password"; password=$gal
-
-    echo $password | sudo openconnect -b $1$domain -u $username &> out
+    echo $password | sudo openconnect -b $1 -u $username &> out
     cert=$(grep "servercert" out | head -1)
-    if ! [ -z "$cert" ]; then
-        echo $password | sudo openconnect -b $1$domain -u $username $cert &> out
-    fi
+    ! [ -z "$cert" ] && echo $password | sudo openconnect -b $1$domain -u $username $cert &> out
     cat out
     rm out
 }
 
 
-disconnect () {
+disconnect() {
 	sudo pkill -SIGINT openconnect
+}
+
+
+connect_specific() {
+    disconnect
+    [ ! -f $config_file ] && save_vpn_data
+    grep_awk "domain" && domain=$gal
+    ! [ -z $domain ] && domain=.$domain
+    connect $domain
+}
+
+
+server_avg_ping() {
+    sudo touch $ping_buff && sudo chown $USER:$USER $ping_buff
+    ping $1 -c 8 > $ping_buff
+    p=$(cat $ping_buff | tail -1 | cut -d' ' -f4 | cut -d'/' -f2 | cut -d'.' -f1)
+
+    unavailable=`echo p_out | grep -Eicq 'name or service not known'`
+    ping_return=""
+    $unavailable && ping_return="$p $1"
+
+    echo $1 ping:$p
+    return 0
+}
+
+
+rand() {
+    disconnect
+    connect $(cat $vpnlist_file | head -$((RANDOM % $(wc -l $vpnlist_file | cut -d' ' -f1) + 1 )) | tail -1)
+}
+
+
+best() {
+    disconnect
+    [ -f $bestlist_file ] && sudo rm $bestlist_file
+    sudo touch $bestlist_file && sudo chown $USER:$USER $bestlist_file
+    while IFS= read -r line
+    do
+        server_avg_ping $line && echo $ping_return >> $bestlist_file
+    done < $vpnlist_file
+    connect $(sort $bestlist_file | head -1 | cut -d' ' -f2)
+
 }
 
 
 help() {
     echo "    occ uses openconnect to connect and disconnect in a more suitable way :)"
     echo 
-    echo "        run this command to make sure you have openconnect installed:"
-    echo "            sudo apt install openconnect"
+    echo "        make sure you have following pacakages installed (e.g. using apt install on ubuntu):"
+    echo "            openconnect, dnsutils"
     echo 
     echo "        usage:"
     echo "            occ <server-prefix>    connects to vpn server at server_prefix.vpn_server_postfix"
+    echo "            occ best               connects to best vpn server (lowest ping) from vpnlist"
+    echo "            occ rand               connects to a random vpn server from vpnlist"
     echo "            occ d                  disconnects!"
-    echo "            occ vpndata            update vpn data (vpn_server_postfix, username, password)"
+    echo "            occ vpndata            updates vpn data (vpn_server_postfix, username, password)"
+    echo "            occ vpnlist            updates a file of all vpn servers available for current registered user"
     echo "            occ -h|--help          shows this help"
     echo 
     exit 0
@@ -104,17 +209,26 @@ if (($# != 1)); then
 fi
 
 case $1 in
+    best)
+        best
+        ;;
+    rand)
+        rand
+        ;;
     d)
-	disconnect
-	;;
+	    disconnect
+    	;;
     -h|--help)
         help
         ;;
     vpndata)
         save_vpn_data
         ;;
+    vpnlist)
+        save_vpn_list
+        ;;
     *)
-	connect $1
+	connect_specific $1
 	;;
 esac
 

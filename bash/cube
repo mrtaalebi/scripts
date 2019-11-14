@@ -11,8 +11,8 @@ draw() {
         cols=`tput cols`
 
         len=$(( (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) % SCALE + 1 + (256 - $1) / 240 ))
-        x=$((RANDOM % ($lines / $len) * $len))
-        y=$((RANDOM % ($cols / ($len * 2)) * ($len * 2)))
+        x=$((RANDOM % ($lines / $len) * $len + 1))
+        y=$((RANDOM % ($cols / ($len * 2)) * ($len * 2) + 1))
 
         for ((i=0;i<$len;i++))
         do

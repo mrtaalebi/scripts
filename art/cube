@@ -6,12 +6,11 @@ SCALE=5
 
 draw() {
     color="38;5;$1m"
-    lines=`tput lines`
-    cols=`tput cols`
 
     while ((1))
     do
-
+        lines=`tput lines`
+        cols=`tput cols`
         len=$(( (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) % SCALE + 1 + (256 - $1) / 240 ))
         x=$((RANDOM % ($lines / $len) * $len + 1))
         y=$((RANDOM % ($cols / ($len * 2)) * ($len * 2) + 1))
@@ -38,7 +37,7 @@ for ((i=0;i<$ratio_bw;i++))
 do
     for ((i=232;i<253;i++))
     do
-        sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
+        sleep "0.$(($RANDOM % 500))"
         draw $i 0.05 &
     done
 done
@@ -49,7 +48,7 @@ for ((i=0;i<$ratio_color;i++))
 do
     for ((i=0;i<16;i++))
     do
-        sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
+        sleep "0.$(($RANDOM % 500))"
         draw $i 0.2 &
     done
 done

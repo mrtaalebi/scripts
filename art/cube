@@ -1,58 +1,60 @@
 #!/bin/bash
 
+
 SCALE=5
-DELAY=0.01
+
 
 draw() {
-    color="48;5;$1m"
+    color="38;5;$1m"
+    lines=`tput lines`
+    cols=`tput cols`
+
     while ((1))
     do
-        lines=`tput lines`
-        cols=`tput cols`
 
         len=$(( (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) * (100 - RANDOM % 100) % SCALE + 1 + (256 - $1) / 240 ))
         x=$((RANDOM % ($lines / $len) * $len + 1))
         y=$((RANDOM % ($cols / ($len * 2)) * ($len * 2) + 1))
-
+        c=`echo $(($RANDOM % 19 + 41)) | xxd -p -r`
         for ((i=0;i<$len;i++))
         do
             for ((j=0;j<$len;j++))
             do
-                printf "\e[0m\e[$((x + i));$((y + (j * 2)))H\e[$color  "
+                printf "\e[0m\e[$((x + i));$((y + (j * 2)))H\e[${color}${c}${c}"
             done
         done
 
-        if [ $1 -ge 0 ] && [ $1 -lt 16 ]
-        then
-            sleep `bc -l <<< "scale=2; $DELAY * $SCALE * $SCALE"`
-        else
-            sleep $DELAY
-        fi
+        sleep $2
     done
 }
 
-clean() {
-    while ((1))
-    do
-        printf "\e[0m\e[2J"
-        sleep $DELAY
-    done
-}
 
-# clean &
+# clean
 printf "\e[0m\e[2J"
 
-for ((i=232;i<256;i++))
+
+ratio_bw=1
+for ((i=0;i<$ratio_bw;i++))
 do
-    sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
-    draw $i &
+    for ((i=232;i<253;i++))
+    do
+        sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
+        draw $i 0.05 &
+    done
 done
-for ((i=0;i<16;i++))
+
+
+ratio_color=1
+for ((i=0;i<$ratio_color;i++))
 do
-    sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
-    draw $i &
+    for ((i=0;i<16;i++))
+    do
+        sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
+        draw $i 0.2 &
+    done
 done
+
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
-
 wait
+

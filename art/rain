@@ -1,0 +1,54 @@
+#!/bin/bash
+
+
+rand() {
+    RAND=$(($RANDOM % $1))
+}
+
+
+put() {
+    color="48;5;${3}m"
+    printf "\e[0m\e[$1;$2H\e[$color  \e[0m"
+}
+
+
+circle() {
+    put $1 $2 $4
+}
+
+
+draw() {
+    lines=$(tput lines)
+    cols=$(tput cols)
+    rand $lines && x=$RAND
+    rand $cols && y=$RAND
+
+    r=$1
+    while [ $r -gt 0 ]; do
+        circle $x $y $r $2
+        r=$((r - 1))
+        sleep $3
+    done
+
+    t=$1
+    while [ $t -lt $((2 * $1)) ]; do
+        circle $x $y $r $2
+        r=$(($1 * $1 - t * t))
+        t=$((t + 1))
+        sleep $3
+    done
+}
+
+i=$(($RANDOM % 100)) && while [ $i -gt 0 ]; do
+    draw $(($RANDOM % 10)) $(($RANDOM % 16)) $(($RANDOM % 3 + 1)) &
+    i=$((i - 1))
+done
+
+
+stop_all() {
+    printf "\e[$(tput lines);$(tput cols)H"
+    pkill -P $$
+}
+
+
+trap stop_all HUP INT QUIT TERM EXIT

@@ -44,6 +44,7 @@ printf "\e[0m\e[2J"
 
 for ((i=232;i<256;i++))
 do
+    sleep `bc -l <<< "scale=3; ($RANDOM % 100) / 1000"`
     draw $i &
 done
 for ((i=0;i<16;i++))

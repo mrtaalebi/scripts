@@ -1,0 +1,8 @@
+#!/bin/bash
+HOST=$1
+shift
+echo $@
+for ARG in "$@"
+do
+    nmap -Pn --host-timeout 100 --max-retries 0 --scanflags SYN -p $ARG $HOST
+done

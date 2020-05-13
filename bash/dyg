@@ -107,14 +107,11 @@ new_download() {
         fi
     done
 
-    i=0
-    while [ 1 ]; do
-        if ! [ -f $DYG_DIR/$i ]; then
-            id=$i
-            break
-        fi
-        i=$((i + 1))
-    done
+    if [ `ls -1 $DYG_DIR/ | wc -l` -eq 0 ]; then
+        id=1
+    else
+        id=$(($(ls -1 $DYG_DIR | sort -n | tail -1) + 1))
+    fi
     INFO_FILE=$DYG_DIR/$id
 
     echo "link $link" > $INFO_FILE
